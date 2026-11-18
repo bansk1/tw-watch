@@ -4,7 +4,7 @@
 const TOKEN = process.env.TW_TOKEN;
 const TOPIC = process.env.NTFY_TOPIC || "treasurewars-krith-9f3k2";
 const SNAP  = "https://api.treasurewars.live/api/v1/tournaments/active/snapshot";
-const ALERT_MIN = 30; // alert when a good, under-cap chest closes within this many minutes
+const ALERT_MIN = 30;
 
 const CHEST = { brown:{blind:5}, blue:{blind:21}, red:{blind:13}, green:{blind:37}, purple:{blind:57}, royal:{blind:143} };
 const nc  = c => { c=String(c||"").toLowerCase().replace(/[^a-z]/g,""); return c.includes("royal")?"royal":c; };
@@ -63,9 +63,13 @@ async function ntfy(title, body){
   });
   hits.sort((a,b)=> a.secs-b.secs || (b.cap-b.bid)-(a.cap-a.bid));
 
+  const scoutLeft = (d.scoutContext?.scoutLimit||0) - (d.scoutContext?.scoutsUsedToday||0);
   if(hits.length){
-    const lines = hits.slice(0,6).map(h=>`#${h.i} ${h.color}: bid up to ${h.cap} (now ${h.bid}, closes ${fmt(h.secs)})`);
-    await ntfy(`Treasure Wars - ${hits.length} chest(s) closing`, lines.join("\n") + (gold!=null?`\nGold: ${gold}`:""));
+    const lines = hits.slice(0,6).map(h=>`#${h.i+1} ${h.color}: bid up to ${h.cap} (now ${h.bid}, closes ${fmt(h.secs)})`);
+    let body = lines.join("\n");
+    if(gold!=null) body += `\nGold: ${gold}`;
+    if(scoutLeft>0) body += `\nScout still unused today`;
+    await ntfy(`Treasure Wars - ${hits.length} chest(s) closing`, body);
     console.log("alerted", hits.length);
   } else console.log("nothing closing soon");
 
