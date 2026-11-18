@@ -1,11 +1,15 @@
 name: tw-watch
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '7 * * * *'
   workflow_dispatch:
+concurrency:
+  group: tw-watch
+  cancel-in-progress: true
 jobs:
   watch:
     runs-on: ubuntu-latest
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,4 +18,4 @@ jobs:
       - run: node watch.js
         env:
           TW_TOKEN: ${{ secrets.TW_TOKEN }}
-          NTFY_TOPIC: treasurewars-krith-9f3k2
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
