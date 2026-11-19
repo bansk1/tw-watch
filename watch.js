@@ -1,9 +1,11 @@
 // Treasure Wars cloud watcher — one launch loops every 5 min for ~75 min.
-// An hourly trigger relaunches it; concurrency cancels the old loop so there's
-// always exactly one running. READ-ONLY: never bids.
+// Pings /auth/activity each cycle so the session never idle-expires (keeps the
+// token alive 24/7, laptop closed). An hourly trigger relaunches it; concurrency
+// cancels the old loop so exactly one runs. READ-ONLY: never bids.
 const TOKEN = process.env.TW_TOKEN;
 const TOPIC = process.env.NTFY_TOPIC;
 const SNAP  = "https://api.treasurewars.live/api/v1/tournaments/active/snapshot";
+const ACT   = "https://api.treasurewars.live/api/v1/auth/activity";
 const ALERT_MIN = 30, STRIKE_MIN = 15;
 const LOOP_MIN = 75, EVERY_MS = 5*60*1000;
 
@@ -21,10 +23,12 @@ async function ntfy(title, body){
 }
 
 async function runOnce(){
+  try { const a = await fetch(ACT, { method:"POST", headers:{ Authorization:"Bearer "+TOKEN } }); if(!a.ok) console.error("activity", a.status); } catch(e){ console.error("activity", e.message); }
+
   let d;
   try {
     const r = await fetch(SNAP, { headers:{ Authorization:"Bearer "+TOKEN } });
-    if(r.status===401){ await ntfy("Treasure Wars - token expired","Log in and update the TW_TOKEN secret."); return; }
+    if(r.status===401){ await ntfy("Treasure Wars - token expired","Re-login and update the TW_TOKEN secret."); return; }
     if(!r.ok){ console.error("http", r.status); return; }
     d = (await r.json()).data;
   } catch(e){ console.error("fetch", e.message); return; }
